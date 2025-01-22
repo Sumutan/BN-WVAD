@@ -30,7 +30,7 @@ if __name__ == "__main__":
         os.makedirs(args.log_path)
     if not os.path.exists(args.model_path):
         os.makedirs(args.model_path)
-    
+
     wandb.init(
         project="BN-WVAD",
         name=args.version,
@@ -57,18 +57,18 @@ if __name__ == "__main__":
     net = net.cuda()
 
     normal_train_loader = data.DataLoader(
-        XDVideo(root_dir = args.root_dir, mode = 'Train', num_segments = args.num_segments, len_feature = args.len_feature, is_normal = True),
+        XDVideo(root_dir = args.root_dir, mode = 'Train', num_segments = args.num_segments, len_feature = args.len_feature, is_normal = True,list_dir=args.list_dir),
             batch_size = args.batch_size,
             shuffle = True, num_workers = args.num_workers,
             worker_init_fn = worker_init_fn, drop_last = True)
     abnormal_train_loader = data.DataLoader(
-        XDVideo(root_dir = args.root_dir, mode='Train', num_segments = args.num_segments, len_feature = args.len_feature, is_normal = False),
+        XDVideo(root_dir = args.root_dir, mode='Train', num_segments = args.num_segments, len_feature = args.len_feature, is_normal = False,list_dir=args.list_dir),
             batch_size = args.batch_size,
             shuffle = True, num_workers = args.num_workers,
             worker_init_fn = worker_init_fn, drop_last = True)
     test_loader = data.DataLoader(
-        XDVideo(root_dir = args.root_dir, mode = 'Test', num_segments = args.num_segments, len_feature = args.len_feature),
-            batch_size = 5,
+        XDVideo(root_dir = args.root_dir, mode = 'Test', num_segments = args.num_segments, len_feature = args.len_feature,list_dir=args.list_dir),
+            batch_size = args.crop,
             shuffle = False, num_workers = args.num_workers,
             worker_init_fn = worker_init_fn)
 
@@ -86,7 +86,7 @@ if __name__ == "__main__":
         'best_AP': -1,
     }
 
-    metric = test(net, test_loader, test_info, 0)
+    metric = test(net, test_loader, test_info, 0,crop=args.crop)
     for step in tqdm(
             range(1, args.num_iters + 1),
             total = args.num_iters,
@@ -101,15 +101,15 @@ if __name__ == "__main__":
         if (step - 1) % len(abnormal_train_loader) == 0:
             abnormal_loader_iter = iter(abnormal_train_loader)
         losses = train(net, normal_loader_iter,abnormal_loader_iter, optimizer, criterion)
-        wandb.log(losses, step=step)
+        # wandb.log(losses, step=step)
         if step % args.plot_freq == 0 and step > 0:
-            metric = test(net, test_loader, test_info, step)
+            metric = test(net, test_loader, test_info, step, crop=args.crop)
 
             if test_info["AP"][-1] > best_scores['best_AP']:
                 utils.save_best_record(test_info, os.path.join(args.log_path, "xd_best_record_{}.txt".format(args.seed)))
 
                 torch.save(net.state_dict(), os.path.join(args.model_path, "xd_best_{}.pkl".format(args.seed)))
-            
+
             for n, v in metric.items():
                 best_name = 'best_' + n
                 best_scores[best_name] = v if v > best_scores[best_name] else best_scores[best_name]

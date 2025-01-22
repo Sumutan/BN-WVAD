@@ -3,8 +3,8 @@ import torch
 def train(net, normal_loader, abnormal_loader, optimizer, criterion):
     net.train()
     net.flag = "Train"
-    ninput, nlabel = next(normal_loader)
-    ainput, alabel = next(abnormal_loader)
+    ninput, nlabel = next(normal_loader) # [batch,snippets,C]
+    ainput, alabel = next(abnormal_loader) # [batch,snippets,C]
     _data = torch.cat((ninput, ainput), 0)
     _label = torch.cat((nlabel, alabel), 0)
     _data = _data.cuda()
